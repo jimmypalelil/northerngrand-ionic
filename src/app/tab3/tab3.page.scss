@@ -1,1 +1,153 @@
 
+.floor-btn {
+  border-top-left-radius: 25px;
+  border-bottom-right-radius: 25px;
+  height: 40px;
+  width: 100px;
+  padding: 0;
+}
+
+.floor-btn-group {
+  display: flex;
+  justify-content: center;
+}
+
+a[mdbBtn] {
+  -webkit-border-radius: 25px;
+  -moz-border-radius: 25px;
+  border-radius: 25px;
+}
+
+mat-progress-spinner {
+  position:fixed;
+  left:50%;
+  top:50%;
+  z-index: 12000;
+}
+
+mat-cell, mat-header-cell {
+  cursor: pointer;
+}
+
+.active-floor {
+  border-left: 2px solid #5c5edc !important;
+}
+
+.floor:hover {
+  border-left: 2px solid #5c5edc;
+}
+
+.select-buttons {
+  position: sticky;
+  float:right;
+  right: 0;
+  bottom: 50%;
+  z-index: 1000 !important;
+  animation: opendoor 1s ease-in-out 0s 1, animate-stripes 3s linear infinite;
+}
+
+@media (min-width: 70em) {
+  .fixed {
+    position: sticky;
+    top:100px;
+  }
+
+  .select-button {
+    width: 200px;
+    height: 30em;
+    font-size: 14px;
+    padding: 0;
+    border-radius: 20px 0;
+    margin: 0;
+  }
+}
+
+@media (max-width: 37.5em)  {
+  .fixed {
+    margin-top: 10px;
+    margin-left: 10px;
+  }
+  .one {
+    order: 1;
+    margin-top: 45px !important;
+  }
+  .two {
+    order: 2;
+  }
+  .three {
+    order: 3;
+  }
+
+  .select-button {
+    width: 100px;
+    height: 30em;
+    font-size: 11px;
+    padding: 0;
+    border-radius: 20px 0;
+    margin: 0;
+  }
+}
+
+
+.select-button:hover{
+  position: relative;
+  bottom: 3px;
+}
+
+.print-data {
+  display: none;
+}
+
+@media print {
+  .col-sm-8 {
+    flex: 0 0 100%;
+    max-width: 100%;
+    margin: 0 0;
+  }
+
+  .print-data {
+    display: flex;
+    font-size: 16px;
+    width: 180px;
+    margin: 5px;
+  }
+
+  .print-data .status {
+    border-bottom: 1px dashed grey;
+  }
+
+  .column {
+    float: left;
+    width: 25%;
+    padding: 0;
+    margin:0;
+  }
+
+  /* Clear floats after the columns */
+  .row:after {
+    content: "";
+    display: table;
+    clear: both;
+  }
+
+  .card-body {
+    font-weight: 300;
+    font-size: 17px;
+    margin:0;
+    padding: 0;
+    color: #d7c3c7;
+  }
+}
+
+input[type=checkbox] {
+  -ms-transform: scale(2); /* IE */
+  -moz-transform: scale(2); /* FF */
+  -webkit-transform: scale(2); /* Safari and Chrome */
+  -o-transform: scale(2); /* Opera */
+}
+
+.active-status {
+  background: #5c5edc;
+  color: #a99c9c !important;
+  box-shadow: 0 8px 22px black;
+}

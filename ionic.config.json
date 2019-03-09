@@ -1,5 +1,7 @@
 {
   "name": "ionic-trial",
-  "integrations": {},
+  "integrations": {
+    "cordova": {}
+  },
   "type": "angular"
 }
