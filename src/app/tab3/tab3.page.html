@@ -1,75 +1,289 @@
 <ion-header>
   <ion-toolbar>
-    <ion-title>
-      Bedding
+    <ion-title align="center">
+      <i class="fas fa-search-dollar"></i> Lost & Found
     </ion-title>
   </ion-toolbar>
 </ion-header>
 
 <ion-content>
-  <mat-table [dataSource]="dataSource" class="mat-elevation-z8">
 
-    <!-- Checkbox Column -->
-    <ng-container matColumnDef="select">
-      <mat-header-cell class="d-print-none" *matHeaderCellDef>
-        <mat-checkbox (change)="$event ? masterToggle() : null"
-                      [checked]="selection.hasValue() && isAllSelected()"
-                      [indeterminate]="selection.hasValue() && !isAllSelected()">
-        </mat-checkbox>
-      </mat-header-cell>
-      <mat-cell class="d-print-none" mdbWavesEffect *matCellDef="let row" (click)="selection.toggle(row)">
-        <mat-checkbox (click)="$event.stopPropagation()"
-                      (change)="$event ? selection.toggle(row) : null"
-                      [checked]="selection.isSelected(row)">
-        </mat-checkbox>
-      </mat-cell>
-    </ng-container>
+  <div class="lost-container">
+    <mat-accordion>
+      <mat-expansion-panel  [expanded]="panelOpened" (opened)="setPanelOpen(true)">
+        <mat-expansion-panel-header>
+          <mat-panel-title>
+            <p><i class="fas fa-plus-circle"></i> New Item</p>
+          </mat-panel-title>
+          <mat-panel-description>
+            Make a new Item entry
+          </mat-panel-description>
+        </mat-expansion-panel-header>
+        <form>
+          <mat-form-field>
+            <input matInput placeholder="Room Number" name="roomNo" [(ngModel)]="currentLostItem.room_number" required>
+          </mat-form-field>
 
-    <ng-container *ngFor="let value of dataDisplayColumns" matColumnDef="{{value}}">
-      <mat-header-cell *matHeaderCellDef [ngClass]="{'d-print-none': value === 'edit'}">
-        {{value | uppercase}}
-      </mat-header-cell>
-      <mat-cell *matCellDef="let element" [ngClass]="{'d-print-none': value === 'edit'}">
-                <span class="font-weight-bold" [ngClass]="{'green-text': element.status ==='clean', 'red-text': element.status === 'not done'}">
-                  {{value === 'status' ? '' : element[value]}}
-                  <span *ngIf="value === 'status'" style="font-size: 30px;">
-                    <i *ngIf="element[value] === 'clean'; else notDone" class="fas fa-check-circle"></i>
-                    <ng-template #notDone><i class="fas fa-times-circle"></i></ng-template>
-                  </span>
-                </span>
+          <mat-form-field>
+            <input matInput placeholder="Item Description" name="itemDesc" [(ngModel)]="currentLostItem.item_description" required>
+          </mat-form-field>
 
-        <div *ngIf="selection.selected.length == 0" class="d-print-none">
-          <ion-button mdbBtn class="edit-button z-depth-1-half" type="button" mdbWavesEffect
-                  (click)="changeRoomStatus(element)"
-                  *ngIf="value === 'edit'"
-                  [color]="element.status === 'not done' ? 'primary': 'tertiary'">
-            <ion-ripple-effect></ion-ripple-effect>
-            <i *ngIf="element.status === 'not done'" class="far fa-check-square"></i>
-            <i *ngIf="element.status === 'clean'" class="fa fa-undo" aria-hidden="true"></i>
-          </ion-button>
-        </div>
+          <mat-form-field>
+            <input matInput placeholder="Date Found" name="dateFound" [matDatepicker]="picker"
+                   (focus)="picker.open()" readonly [(ngModel)]="currentLostItem.date" required>
+          </mat-form-field>
+          <mat-datepicker #picker></mat-datepicker>
 
-      </mat-cell>
+          <mat-action-row>
+            <!--"Add" button-->
+            <button mat-mini-fab color="primary" (click)="addItem()">
+              <i class="fa fa-plus" aria-hidden="true"></i>
+            </button>
+          </mat-action-row>
+        </form>
+      </mat-expansion-panel>
+    </mat-accordion>
+    <hr>
+    <span><input matInput (keyup)="applyFilter($event.target.value)" id="search" name="search" placeholder="Search... By room number, item or date"></span>
+    <hr>
+    <mat-tab-group (selectedTabChange)="changeTab($event)" class="animated fadeInUp">
+      <mat-tab color="primary" *ngFor="let tab of tabList" label="{{tab | uppercase}}">
 
-    </ng-container>
-    <mat-header-row *matHeaderRowDef="displayedColumns"></mat-header-row>
-    <mat-row *matRowDef="let row; columns: displayedColumns;"></mat-row>
-  </mat-table>
+        <hr class="my-4">
 
-  <!--Select Buttons-->
-  <div class="select-buttons" *ngIf="selection.selected.length > 0">
-    <button mdbBtn class="select-button z-depth-1-half" type="button"
-            (click)="changeSelectRoomStatus('clean')"
-            gradient="tempting-azure" mdbWavesEffect>
-      Clean Selected
-    </button>
-    <hr class="my-4">
-    <button mdbBtn class="select-button z-depth-1-half" type="button"
-            (click)="changeSelectRoomStatus('not done')"
-            gradient="rainy-ashville" mdbWavesEffect>
-      Undo Selected
-    </button>
+        <mat-table [dataSource]="dataSource" matSort (matSortChange)="sortData($event)" class="mat-elevation-z8 lost-table">
+          <ng-container *ngFor="let value of displayedColumns; let i = index" matColumnDef="{{value}}">
+            <mat-header-cell mdbWavesEffect *matHeaderCellDef mat-sort-header class="text-center">
+              {{value | uppercase}}
+            </mat-header-cell>
+            <mat-cell *matCellDef="let element" class="animated fadeInUp">
+              {{value === 'date'|| value === 'return_date' || value === 'date_found' ? (element[value] | date) : (element[value] | uppercase)}}
+
+              <div *ngIf="value === 'action' && tabGroup.selectedIndex === 0">
+                <button mdbBtn gradient="warm-flame" class="edit-button z-depth-3" matTooltip="Delete Item"
+                        matTooltipPosition ="below" (click)="sendItemInfo(element); deleteFrame.show()">
+                  <i class="fas fa-trash-alt"></i>
+                </button>
+
+                <button mdbBtn gradient="tempting-azure" class="edit-button z-depth-3"
+                        matTooltip="Email Jennifer" matTooltipPosition ="below"
+                        (click)="sendItemInfo(element); emailFrame.show()">
+                  <i class="far fa-envelope"></i>
+                </button>
+
+
+                <button mdbWavesEffect mdbBtn matTooltip="Edit Item" matTooltipPosition ="below"
+                        class="edit-button z-depth-3" gradient="rainy-ashville"
+                        (click)="sendItemInfo(element);openUpdateSheet(element)"><i class="far fa-edit"></i>
+                </button>
+
+
+                <button mdbBtn gradient="sunny-morning" class="edit-button z-depth-3" matTooltip="Return to Guest"
+                        matTooltipPosition ="below" (click)="sendItemInfo(element); returnFrame.show()">
+                  <i class="fas fa-gift"></i>
+                </button>
+              </div>
+
+              <div *ngIf="value === 'action' && tabGroup.selectedIndex === 1">
+                <button mdbWavesEffect mdbBtn matTooltip="Edit Item" matTooltipPosition ="below"
+                        class="edit-button z-depth-3"
+                        gradient="rainy-ashville"
+                        (click)="sendItemInfo(element);openUpdateReturnedSheet(element)"><i class="far fa-edit"></i>
+                </button>
+
+                <button mdbBtn gradient="morpheus-den" class="edit-button z-depth-3"
+                        matTooltip="Undo Return" matTooltipPosition ="below"
+                        (click)="sendItemInfo(element); undoFrame.show()">
+                  <i class="fas fa-undo"></i>
+                </button>
+
+                <button mdbBtn gradient="warm-flame" class="edit-button z-depth-3"
+                        matTooltip="Delete Item" matTooltipPosition ="below"
+                        (click)="sendItemInfo(element); deleteReturnedFrame.show()">
+                  <i class="fas fa-trash-alt"></i>
+                </button>
+              </div>
+
+            </mat-cell>
+          </ng-container>
+          <mat-header-row *matHeaderRowDef="displayedColumns" class="z-depth-3"></mat-header-row>
+          <mat-row *matRowDef="let row; columns: displayedColumns;"></mat-row>
+        </mat-table>
+
+      </mat-tab>
+    </mat-tab-group>
   </div>
-  <!--Select Buttons End-->
+
+
+  <!--MODALS-->
+  <!--Delete lost Item Modal-->
+  <div mdbModal #deleteFrame="mdbModal" class="modal fade left" id="frameModalTop" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header text-center">
+          <h4 class="modal-title w-100 font-weight-bold">Delete Item</h4>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close" (click)="deleteFrame.hide()">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body mx-3">
+
+          <blockquote class="blockquote bq-warning" *ngIf="currentLostItem !== null">
+            <p class="bq-title">Are you sure you wanna delete the following Item?</p>
+            <p>{{currentLostItem.item_description | uppercase}}</p>
+            <p>Found in: {{currentLostItem.room_number}}</p>
+          </blockquote>
+        </div>
+        <div class="modal-footer d-flex justify-content-center">
+          <button mdbBtn color="default" class="waves-light btn btn-primary" (click)="deleteFrame.hide()" mdbWavesEffect>Cancel</button>
+          <button mdbBtn color="default" class="waves-light btn btn-danger btn-rounded" color="danger" (click)="deleteFrame.hide();deleteLostItem()" mdbWavesEffect>Delete</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!--Delete Returned Item Modal-->
+  <div mdbModal #deleteReturnedFrame="mdbModal" class="modal fade left" id="frameModalTop2" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header text-center">
+          <h4 class="modal-title w-100 font-weight-bold">Delete Item</h4>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close" (click)="deleteReturnedFrame.hide()">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body mx-3">
+
+          <blockquote class="blockquote bq-warning" *ngIf="currentLostItem !== null">
+            <p class="bq-title">Are you sure you wanna delete the following Item?</p>
+            <p>{{currentReturnItem.item_description | uppercase}}</p>
+            <p>Returned to: {{currentReturnItem.guest_name}}</p>
+          </blockquote>
+        </div>
+        <div class="modal-footer d-flex justify-content-center">
+          <button mdbBtn color="default" class="waves-light btn btn-primary" (click)="deleteReturnedFrame.hide()" mdbWavesEffect>Cancel</button>
+          <button mdbBtn color="default" class="waves-light btn btn-danger btn-rounded" color="danger" (click)="deleteReturnedFrame.hide();deleteLostItem()" mdbWavesEffect>Delete</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!--Email Modal-->
+  <div mdbModal #emailFrame="mdbModal" class="modal fade left" id="deleteFrame" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header text-center">
+          <h4 class="modal-title w-100 font-weight-bold">Email Jennifer</h4>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close" (click)="emailFrame.hide()">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body mx-3">
+
+          <blockquote class="blockquote bq-warning" *ngIf="currentLostItem !== null">
+            <p class="bq-title">Are you sure you wanna Email Jennifer about the following Item?</p>
+            <p>{{currentLostItem.item_description | uppercase}} found in: {{currentLostItem.room_number}}</p>
+          </blockquote>
+        </div>
+        <div class="modal-footer d-flex justify-content-center">
+          <button mdbBtn color="default" class="waves-light btn btn-primary" (click)="emailFrame.hide()" mdbWavesEffect>Cancel</button>
+          <button mdbBtn color="default" class="waves-light btn btn-danger btn-rounded" color="danger"
+                  (click)="emailFrame.hide();sendEmail()" mdbWavesEffect>Confirm</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div mdbModal class="modal fade" #returnFrame="mdbModal" id="returnModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header text-center">
+          <h4 class="modal-title w-100 font-weight-bold">Record a Return Item</h4>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close" (click)="returnFrame.hide()">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body mx-3">
+          <mat-form-field>
+            <mat-placeholder>
+              <i class="fa fa-user prefix grey-text"></i> Guest Name
+            </mat-placeholder>
+            <input matInput type="text" name="guestName" autofocus [(ngModel)]="currentReturnItem.guest_name" required>
+          </mat-form-field>
+
+          <mat-form-field>
+            <mat-placeholder>
+              <i class="fas fa-hashtag"></i> Room #
+            </mat-placeholder>
+            <input matInput type="text" name="room_no" value="{{currentLostItem.room_number}}" [(ngModel)]="currentReturnItem.room_number" required>
+          </mat-form-field>
+
+          <mat-form-field>
+            <mat-placeholder>
+              <i class="fas fa-align-left"></i> Item Description
+            </mat-placeholder>
+            <input matInput type="text" name="itemDesc" value="{{currentLostItem.item_description}}" [(ngModel)]="currentReturnItem.item_description" required>
+          </mat-form-field>
+
+          <mat-form-field>
+            <mat-placeholder>
+              <i class="fa fa-user prefix grey-text"></i> Returned By
+            </mat-placeholder>
+            <input matInput type="text" name="returnedBy" [(ngModel)]="currentReturnItem.returned_by" required>
+          </mat-form-field>
+
+          <mat-form-field>
+            <mat-placeholder>
+              <i class="fas fa-calendar-day"></i> Return Date
+            </mat-placeholder>
+            <input matInput name="returnDate" [matDatepicker]="returnDatePicker"
+                   (focus)="returnDatePicker.open()" [(ngModel)]="currentReturnItem.return_date" required>
+            <mat-datepicker #returnDatePicker></mat-datepicker>
+          </mat-form-field>
+
+          <div>
+            <mat-form-field>
+              <mat-placeholder>
+                <i class="fas fa-comment"></i> Comments
+
+              </mat-placeholder>
+              <textarea matInput type="text" name="comments" [(ngModel)]="currentReturnItem.comments" ></textarea>
+            </mat-form-field>
+          </div>
+
+        </div>
+        <div class="modal-footer d-flex justify-content-center">
+          <button class="btn btn-unique" (click)="returnToGuest();returnFrame.hide()">Return <i class="far fa-paper-plane"></i></button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!--Undo Return Modal-->
+  <div mdbModal #undoFrame="mdbModal" class="modal fade left" id="undoFrame" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header text-center">
+          <h4 class="modal-title w-100 font-weight-bold">Undo This Return Item</h4>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close" (click)="undoFrame.hide()">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body mx-3">
+
+          <blockquote class="blockquote bq-warning" *ngIf="currentLostItem !== null">
+            <p class="bq-title">Are you sure you want to REPLACE the following Item in the Lost & Found List</p>
+            <p>{{currentReturnItem.item_description | uppercase}} found in: {{currentReturnItem.room_number}}</p>
+          </blockquote>
+        </div>
+        <div class="modal-footer d-flex justify-content-center">
+          <button mdbBtn color="default" class="waves-light btn btn-primary" (click)="undoFrame.hide()" mdbWavesEffect>Cancel</button>
+          <button mdbBtn color="default" class="waves-light btn btn-danger btn-rounded" color="danger"
+                  (click)="undoFrame.hide(); undoReturn()" mdbWavesEffect>Confirm</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
 
 </ion-content>

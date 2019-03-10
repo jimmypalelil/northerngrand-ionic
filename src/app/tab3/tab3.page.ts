@@ -1,149 +1,206 @@
-import {AfterViewInit, Component, OnInit} from '@angular/core';
-import {Room} from '../models/room';
-import {Router} from '@angular/router';
+import {AfterViewInit, Component, EventEmitter, OnInit, Output, ViewChild} from '@angular/core';
 import {ListService} from '../services/list.service';
-import {MatSnackBar, MatTableDataSource} from '@angular/material';
-import {NavController} from '@ionic/angular';
-import {Observable} from 'rxjs';
-import {SelectionModel} from '@angular/cdk/collections';
+import {
+    MatBottomSheet,
+    MatSnackBar,
+    MatSort,
+    MatTabChangeEvent,
+    MatTabGroup,
+    MatTableDataSource
+} from '@angular/material';
+
+import {LostItem} from '../models/lostitem';
+import {ReturnedItem} from '../models/returneditem';
+import {environment} from '../../environments/environment.prod';
+import {UpdatelostComponent} from './updatelost/updatelost.component';
+import {UpdatereturnedComponent} from './updatereturned/updatereturned.component';
 
 @Component({
     selector: 'app-tab3',
     templateUrl: 'tab3.page.html',
     styleUrls: ['tab3.page.scss']
 })
+
 export class Tab3Page implements OnInit, AfterViewInit {
-    results: Observable<any>;
-
-    months = [['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'],
-        ['jan to jun', 'jul to dec'],
-        ['jan to mar', 'apr to jun', 'july to sep', 'oct to dec']];
-
-    floors = [{label: '2nd Floor', data: 200}, {label: '3rd Floor', data: 300}, {label: '4th Floor', data: 400},
-        {label: '5th Floor', data: 500}, {label: '6th Floor', data: 600}];
-
-    types = [{label: 'Bedding', data: 'beddings', index: 0}, {label: 'Carpet Shampoo', data: 'carpets', index: 1},
-        {label: 'Bed Flips', data: 'mattress', index: 2}, {label: 'Pillows', data: 'pillows', index: 2},
-        {label: 'Pillow Protectors', data: 'pillowss', index: 1}];
-
-    years = [2018, 2019];
-
-    displayedColumns = ['select', 'room_number', 'type', 'status', 'edit'];
-    dataDisplayColumns = ['room_number', 'type', 'status', 'edit'];
-    currentFloor = 200;
-    statuses = [{label: 'All Rooms', data: this.currentFloor}, {label: 'Undone Rooms', data: 'not done'},
-        {label: 'Done Rooms', data: 'clean'}];
-    currentStatusIndex: number;
-    counts = [0, 0, 0];
-    allRooms = [[]];
-
-    currentMonth: string;
-    currentYear: number;
-    currentType: any;
+    dataSource: MatTableDataSource<any>;
+    tabList = ['Lost & Found Items', 'Returned Items'];
+    displayedColumns = [];
+    currentLostItem: LostItem;
+    currentReturnItem: ReturnedItem;
+    panelOpened: boolean;
+    actionHeader: string;
+    showUpdateBar = false;
+    imageUrl = environment.imageUrl;
     showSpinner = false;
-    showMenu = false;
-    dataSource: any;
-    selection = new SelectionModel<Room>(true, []);
 
-    constructor(private router: Router, private listService: ListService, public navCtrl: NavController, public snackBar: MatSnackBar) {}
-
-    ngOnInit() {
-        this.currentType = JSON.parse(JSON.stringify(this.types))[0];
-        const date = new Date();
-        const month = date.getMonth();
-        this.currentMonth = this.months[0][month];
-        this.currentYear = date.getFullYear();
-
+    constructor(private list: ListService, private snackBar: MatSnackBar, private updateSheet: MatBottomSheet) {
+        this.currentLostItem = new LostItem();
+        this.currentReturnItem = new ReturnedItem();
     }
+
+    @ViewChild(MatTabGroup) tabGroup: MatTabGroup;
+    @ViewChild(MatSort) sort: MatSort;
+
+    @Output() spinnerEvent = new EventEmitter<boolean>();
+
+    ngOnInit() {}
 
     ngAfterViewInit() {
-        this.getMonthList(this.currentType, this.currentMonth, this.currentYear);
+        setTimeout(() => {
+            this.getItemList();
+        }, 500);
     }
 
-    getMonthList(type, month, year) {
-        this.listService.getRoomList(type.data, month, year).then(data => {
-            this.dataSource = new MatTableDataSource();
-            const print_data = [[], [], [], [], []];
-            data.forEach(function(room) {
-                print_data[Math.floor(room.room_number / 100) - 2].push(room);
-            });
-            this.allRooms = print_data;
-            this.dataSource.filterPredicate = (room: Room, filter: any) =>
-                room.status === filter || room.room_number >= Number(filter);
-            this.changeFloor(this.currentFloor);
-            this.currentType = type;
-        });
-    }
-
-    changeFloor(floor) {
-        this.currentFloor = floor;
-        this.dataSource.data = this.allRooms[floor / 100 - 2];
-        let doneCount = 0;
-        this.dataSource.data.forEach(function (room) {
-            if (room.status === 'clean') {
-                doneCount++;
-            }
-        });
-        const total = this.dataSource.data.length;
-        this.counts = [total, total - doneCount, doneCount];
-        this.selection.clear();
-        this.currentStatusIndex = 0;
-        this.dataSource.filter = floor;
-    }
-
-    changeRoomStatus(room: Room) {
-        const newStatus = room.status === 'clean' ? 'not done' : 'clean';
-        this.listService.changeRoomStatus([room], newStatus).subscribe(msg => {
-            if (newStatus === 'not done') {
-                this.counts[2]--;
-                this.counts[1]++;
-            } else {
-                this.counts[1]--;
-                this.counts[2]++;
-            }
-            room.status = newStatus;
-        });
-    }
-
-    isAllSelected() {
-        const numSelected = this.selection.selected.length;
-        const numRows = this.dataSource.filteredData.length;
-        return numSelected === numRows;
-    }
-
-    masterToggle() {
-        this.isAllSelected() ?
-            this.dataSource.filteredData.forEach(room => {
-                this.selection.deselect(room);
-            }) :
-            this.dataSource.filteredData.forEach(room => {
-                this.selection.select(room);
-            });
-    }
-
-    changeSelectRoomStatus(status) {
-        const selectedRooms: Room[] = [];
-        for (let i = 0; i < this.selection.selected.length; i++) {
-            const room = this.selection.selected[i];
-            if (room.status !== status) {
-                selectedRooms.push(room);
-            }
-        }
-        this.listService.changeRoomStatus(selectedRooms, status).subscribe(msg => {
-            this.selection.clear();
-            this.snackBar.open(msg['text'].toUpperCase(), '', {
-                duration: 2000,
-            });
-            let doneCount = 0;
-            selectedRooms.forEach(function (room) {
-                room.status = status;
-                if (status === 'clean') {
-                    doneCount++;
+    getItemList() {
+        this.toggleSpinner();
+        this.displayedColumns = [];
+        this.list.getLostList().then(data => {
+            if (data.length > 0) {
+                for (const key in data[0]) {
+                    if (key !== '_id' && key !== 'cat') {
+                        this.displayedColumns.push(key);
+                    }
                 }
-            });
-            this.counts[2] = doneCount;
-            this.counts[1] = this.counts[0] - doneCount;
+                this.displayedColumns.push('action');
+                this.dataSource = new MatTableDataSource(data);
+                this.dataSource.sort = this.sort;
+                this.toggleSpinner();
+            }
         });
     }
 
+    toggleSpinner() {
+        this.showSpinner = !this.showSpinner;
+        this.spinnerEvent.emit(this.showSpinner);
+    }
+
+    getReturnedItemList() {
+        this.toggleSpinner();
+        this.displayedColumns = [];
+        this.list.getReturnedItemList().then(data => {
+            if (data.length > 0) {
+                for (const key in data[0]) {
+                    if (key !== '_id' && key !== 'cat') {
+                        this.displayedColumns.push(key);
+                    }
+                }
+                this.displayedColumns.push('action');
+                this.dataSource = new MatTableDataSource(data);
+                this.dataSource.sort = this.sort;
+                this.toggleSpinner();
+            }
+        });
+    }
+
+    changeTab(event: MatTabChangeEvent) {
+        if (event.index === 0) {
+            this.getItemList();
+        } else {
+            this.getReturnedItemList();
+        }
+    }
+
+    applyFilter(filterValue: string) {
+        this.dataSource.filter = filterValue.trim().toLowerCase();
+    }
+
+    sortData(event) {
+        this.sort.active = event.active;
+        this.sort.direction = event.direction;
+        this.dataSource.sort = this.sort;
+    }
+
+    sendItemInfo(item) {
+        if (this.tabGroup.selectedIndex === 0) {
+            this.currentLostItem = item;
+        } else {
+            this.currentReturnItem = item;
+        }
+    }
+
+    openUpdateSheet(item): void {
+        this.updateSheet.open(UpdatelostComponent, {
+            data: {item: item},
+        });
+    }
+
+    deleteLostItem() {
+
+        if (this.tabGroup.selectedIndex === 0) {
+            this.list.deleteLostItem(this.currentLostItem).then(msg => {
+                this.dataSource.data.splice(this.dataSource.data.indexOf(this.currentLostItem), 1);
+                this.dataSource._updateChangeSubscription();
+                this.snackBar.open(msg['text'], '', {
+                    duration: 2000,
+                });
+            });
+        } else {
+            this.list.deleteReturnedItem(this.currentReturnItem).then(msg => {
+                this.dataSource.data.splice(this.dataSource.data.indexOf(this.currentReturnItem), 1);
+                this.dataSource._updateChangeSubscription();
+                this.snackBar.open(msg['text'], '', {
+                    duration: 2000,
+                });
+            });
+        }
+    }
+
+    addItem() {
+
+        if (isNaN(this.currentLostItem.room_number) ||
+            this.currentLostItem.item_description === '' || this.currentLostItem.date === undefined) {
+            this.snackBar.open('Looks like you forgot to add Some Details', '', {
+                duration: 3000,
+            });
+        } else {
+            this.panelOpened = false;
+            this.list.addNewLostItem(this.currentLostItem).then(msg => {
+                this.tabGroup.selectedIndexChange.emit(0);
+                this.getItemList();
+                this.snackBar.open('Item Added Successfully', '', {
+                    duration: 2000
+                });
+            });
+        }
+
+    }
+
+    setPanelOpen(b: boolean) {
+        this.panelOpened = b;
+    }
+
+    sendEmail() {
+        this.list.sendItemEmail(this.currentLostItem).then(msg => {
+            this.snackBar.open(msg['text'], '', {
+                duration: 2000
+            });
+        });
+    }
+
+    returnToGuest() {
+        this.currentReturnItem._id = this.currentLostItem._id;
+        if (this.currentReturnItem.comments === undefined) {
+            this.currentReturnItem.comments = '';
+        }
+        this.list.returnItem(this.currentReturnItem).then(msg => {
+            this.tabGroup.selectedIndex = 1; // switch to retrun items view
+            this.snackBar.open(msg['text'], '', {duration: 2000});
+        }).catch(err => {
+            this.snackBar.open('Oops! Looks like its missing some information', '',
+                {duration: 2000});
+        });
+    }
+
+    undoReturn() {
+        this.list.undoReturn(this.currentReturnItem).then(msg => {
+            this.tabGroup.selectedIndex = 0;
+            this.snackBar.open(msg['text'], '', {duration: 2000});
+        });
+    }
+
+    openUpdateReturnedSheet(item) {
+        this.updateSheet.open(UpdatereturnedComponent, {
+            data: {item: item},
+        });
+    }
 }

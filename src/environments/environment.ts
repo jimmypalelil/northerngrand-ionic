@@ -5,11 +5,11 @@
 
 export const environment = {
   production: false,
-  baseUrl: 'http://127.0.0.1:5000/',
-  Url: 'http://127.0.0.1:5000/list/',
-  lostUrl: 'http://127.0.0.1:5000/lostAndFound/',
-  insUrl: 'http://127.0.0.1:5000/inspection/',
-  invUrl: 'http://127.0.0.1:5000/inventory/',
+  baseUrl: 'https://northerngrand-hotel-test.herokuapp.com/',
+  Url: 'https://northerngrand-hotel-test.herokuapp.com/list/',
+  lostUrl: 'https://northerngrand-hotel-test.herokuapp.com/lostAndFound/',
+  insUrl: 'https://northerngrand-hotel-test.herokuapp.com/inspection/',
+  invUrl: 'https://northerngrand-hotel-test.herokuapp.com/inventory/',
   imageUrl: '/assets/images/'
 };
 

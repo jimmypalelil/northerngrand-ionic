@@ -18,6 +18,7 @@ import {LoginRedirectService} from './services/login-redirect.service';
 import {InspectionService} from './services/inspection.service';
 import {MDBBootstrapModule} from 'angular-bootstrap-md';
 import {BrowserAnimationsModule, NoopAnimationsModule} from '@angular/platform-browser/animations';
+import { IonicStorageModule } from '@ionic/storage';
 
 @NgModule({
     imports: [
@@ -31,6 +32,7 @@ import {BrowserAnimationsModule, NoopAnimationsModule} from '@angular/platform-b
         MatSnackBarModule,
         BrowserAnimationsModule,
         NoopAnimationsModule,
+        IonicStorageModule.forRoot(),
         MDBBootstrapModule.forRoot()
     ],
     declarations: [AppComponent],

@@ -1,0 +1,176 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-title align="center">
+      <i class="fas fa-building"></i> Housekeeping
+    </ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content padding>
+
+  <div class="container">
+
+    <mdb-card class="text-center list-title">
+      <mdb-card-body>
+        <mdb-card-title>
+          <h3>{{currentType['label'] | uppercase}}</h3>
+        </mdb-card-title>
+        <mdb-card-text>
+          <h5>{{currentMonth | uppercase}} {{currentYear}}</h5>
+        </mdb-card-text>
+        <mdb-card-text class="d-print-none">
+          {{floors[currentFloor / 100 - 2].label | uppercase}}
+        </mdb-card-text>
+      </mdb-card-body>
+    </mdb-card>
+
+    <hr class="my-4 d-print-none">
+
+    <mat-tab-group class="d-print-none" (selectedTabChange)="changeTab($event)">
+      <mat-tab color="primary" *ngFor="let month of months[currentType['index']]" label="{{month | uppercase}}">
+
+        <!--Search Bar-->
+        <div class="search-bar d-print-none">
+          <hr class="my-4">
+          <span><input (keyup)="applyFilter($event.target.value)" name="search" placeholder="Search... By Room No."></span>
+          <hr class="my-3">
+        </div>
+
+
+        <mat-table [dataSource]="dataSource" matSort (matSortChange)="sortData($event)" class="mat-elevation-z8 animated fadeInUp">
+          <!-- Checkbox Column -->
+          <ng-container matColumnDef="select">
+            <mat-header-cell class="d-print-none" *matHeaderCellDef>
+              <mat-checkbox (change)="$event ? masterToggle() : null"
+                            [checked]="selection.hasValue() && isAllSelected()"
+                            [indeterminate]="selection.hasValue() && !isAllSelected()">
+              </mat-checkbox>
+            </mat-header-cell>
+            <mat-cell class="d-print-none" mdbWavesEffect *matCellDef="let row" (click)="selection.toggle(row)">
+              <mat-checkbox (click)="$event.stopPropagation()"
+                            (change)="$event ? selection.toggle(row) : null"
+                            [checked]="selection.isSelected(row)">
+              </mat-checkbox>
+            </mat-cell>
+          </ng-container>
+
+          <ng-container *ngFor="let value of dataDisplayColumns" matColumnDef="{{value}}">
+            <mat-header-cell mdbWavesEffect *matHeaderCellDef
+                             [ngClass]="{'d-print-none': value === 'edit'}"
+                             mat-sort-header> {{value | uppercase}}</mat-header-cell>
+            <mat-cell *matCellDef="let element"
+                      [ngClass]="{'d-print-none': value === 'edit'}"
+                      (click)="value !== 'edit' ? selection.toggle(element) : null">
+                <span class="font-weight-bold" [ngClass]="{'green-text': element.status ==='clean', 'red-text': element.status === 'not done'}">
+                  {{value === 'status' ? '' : element[value]}}
+                  <span *ngIf="value === 'status'" style="font-size: 30px;" [matTooltip] = "element.status | uppercase"
+                        matTooltipPosition ="after">
+                    <i *ngIf="element[value] === 'clean'; else notDone" class="fas fa-check-circle"></i>
+                    <ng-template #notDone><i class="fas fa-times-circle"></i></ng-template>
+                  </span>
+                </span>
+
+              <div *ngIf="selection.selected.length == 0" class="d-print-none">
+                <button mdbBtn class="edit-button z-depth-1-half" type="button"
+                        (click)="changeRoomStatus(element)"
+                        [matTooltip] = "element.status === 'clean' ? 'Undo' : 'Clean Room'"
+                        matTooltipPosition ="after"
+                        *ngIf="value === 'edit'"
+                        [ngClass]="{'blue-gradient': element.status=== 'not done', 'peach-gradient': element.status === 'clean'}"
+                        mdbWavesEffect>
+                  <i *ngIf="element.status === 'not done'" class="far fa-check-square"></i>
+                  <i *ngIf="element.status === 'clean'" class="fa fa-undo" aria-hidden="true"></i>
+                </button>
+              </div>
+            </mat-cell>
+
+          </ng-container>
+          <mat-header-row *matHeaderRowDef="displayedColumns"></mat-header-row>
+          <mat-row *matRowDef="let row; columns: displayedColumns;"></mat-row>
+        </mat-table>
+
+        <!--Select Buttons-->
+        <div class="select-buttons" *ngIf="selection.selected.length > 0">
+          <button mdbBtn class="select-button z-depth-1-half" type="button"
+                  (click)="changeSelectRoomStatus('clean')"
+                  gradient="tempting-azure" mdbWavesEffect>
+            Clean Selected
+          </button>
+          <hr class="my-4">
+          <button mdbBtn class="select-button z-depth-1-half" type="button"
+                  (click)="changeSelectRoomStatus('not done')"
+                  gradient="rainy-ashville" mdbWavesEffect>
+            Undo Selected
+          </button>
+        </div>
+        <!--Select Buttons End-->
+
+      </mat-tab>
+    </mat-tab-group>
+
+    <!--Menu for Mobile View-->
+    <div class="animated fadeInUp bottom-menu text-white">
+
+      <div class="ion-text-center">
+        <i class="fas fa-ellipsis-h bottom-menu-button" (click)="toggleMenu()"></i>
+      </div>
+
+      <div class="menu animated fadeInDown">
+        <mat-list>
+
+          <h3 mat-subheader>Select Type</h3>
+          <mat-menu #typeMenu="matMenu">
+            <button mat-menu-item *ngFor="let type of types" (click)="setType(type)">{{type.label}}</button>
+          </mat-menu>
+          <span>
+            <div class="btn-group" mdbDropdown>
+              <button type="button" mdbBtn color="primary" class="waves-light" mdbWavesEffect >
+                {{currentType['label'] | uppercase}}
+              </button>
+              <button type="button" mdbDropdownToggle mdbBtn color="primary" class="dropdown-toggle
+                        dropdown-toggle-split px-3 waves-light" mdbWavesEffect [matMenuTriggerFor]="typeMenu">
+              </button>
+            </div>
+          </span>
+
+          <h3 mat-subheader>Select Year</h3>
+          <mat-menu #yearMenu="matMenu">
+            <button mat-menu-item *ngFor="let year of years" (click)="setCurrentYear(year)">{{year}}</button>
+          </mat-menu>
+          <span>
+            <div class="btn-group" mdbDropdown>
+              <button type="button" mdbBtn color="secondary" class="waves-light" mdbWavesEffect >{{currentYear}}</button>
+              <button type="button" mdbDropdownToggle mdbBtn color="secondary" class="dropdown-toggle dropdown-toggle-split px-3 waves-light"
+                      mdbWavesEffect [matMenuTriggerFor]="yearMenu"></button>
+            </div>
+          </span>
+
+          <h3 mat-subheader>Select Floor</h3>
+          <mat-menu #floorMenu="matMenu">
+            <button mat-menu-item *ngFor="let floor of floors; let i = index;"
+                    (click)="changeFloor(floor.data)">{{floor.label}}</button>
+          </mat-menu>
+          <span>
+            <div class="btn-group" mdbDropdown>
+              <button type="button" mdbBtn color="danger" class="waves-light" mdbWavesEffect>{{floors[currentFloor / 100 - 2].label}}</button>
+              <button type="button" mdbDropdownToggle mdbBtn color="danger" class="dropdown-toggle dropdown-toggle-split px-3 waves-light"
+                      mdbWavesEffect [matMenuTriggerFor]="floorMenu"></button>
+            </div>
+          </span>
+        </mat-list>
+
+        <hr class="my-4">
+
+        <mat-list>
+          <h3 mat-subheader>Select Status for {{floors[(currentFloor/100) - 2].label}}</h3>
+          <a mdbWavesEffect mat-list-item mdbBtn *ngFor="let status of statuses; let i = index"
+             (click)="setStatus(i)"
+             [ngClass]="{'active-status': currentStatusIndex === i}">
+            {{status.label}} <span class="badge badge-danger ml-2">{{counts[i]}}</span>
+          </a>
+        </mat-list>
+      </div>
+    </div>
+  </div>
+
+</ion-content>
